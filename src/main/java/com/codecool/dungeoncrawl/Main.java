@@ -4,6 +4,7 @@ import com.codecool.dungeoncrawl.logic.Cell;
 import com.codecool.dungeoncrawl.logic.GameMap;
 import com.codecool.dungeoncrawl.logic.MapLoader;
 import com.codecool.dungeoncrawl.logic.actors.Actor;
+import com.codecool.dungeoncrawl.logic.actors.Player;
 import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
@@ -26,17 +27,25 @@ import java.util.List;
 
 public class Main extends Application {
     GameMap map = MapLoader.loadMap();
+    final static int maxWidth = 12;
     Canvas canvas = new Canvas(
-            map.getWidth() * Tiles.TILE_WIDTH,
-            map.getHeight() * Tiles.TILE_WIDTH);
+            Math.min(map.getWidth() * Tiles.TILE_WIDTH, (viewDeltaH * 2 + 1) * Tiles.TILE_WIDTH),
+            Math.min(map.getHeight() * Tiles.TILE_WIDTH, (viewDeltaV * 2 + 1) * Tiles.TILE_WIDTH));
     GraphicsContext context = canvas.getGraphicsContext2D();
     Label healthLabel = new Label();
-    //Label label = new Label("Not clicked");
     Label firstItem = new Label();
     Label inventory = new Label();
     Label damageLabel = new Label();
+    Label nameLabel = new Label();
+    public static String name;
+    final static int viewDeltaH = 12;
+    final static int viewDeltaV = 9;
+    static boolean restartFlag = false;
+    public static void setRestartFlag() { restartFlag = true; }
 
     public static void main(String[] args) {
+        if (args.length > 0) name = args[0];
+        else name = "Player";
         launch(args);
     }
 
@@ -46,22 +55,11 @@ public class Main extends Application {
         ui.setPrefWidth(200);
         ui.setPadding(new Insets(10));
 
-        ui.add(new Label(" "),0,0);
+        nameLabel.setText(name);
+        ui.add(new Label("Name: "), 0, 0);
+        ui.add(nameLabel, 1, 0);
+
         ui.add(new Label(" "),0,1);
-
-        ui.add(new Label("Health: "), 0, 2);
-        ui.add(healthLabel, 1, 2);
-
-        ui.add(new Label("Damage: "), 0, 3);
-        ui.add(damageLabel, 1,3);
-
-        ui.add(new Label(" "),0,4);
-
-        ui.add(new Label("Inventory: "),0, 5);
-        ui.add(firstItem, 1,5);
-
-        ui.add(inventory, 1, 6);
-
 
         Button button = new Button("Pick up item");
 
@@ -72,8 +70,24 @@ public class Main extends Application {
 
 
         button.setFocusTraversable(false);
-        ui.add(button, 0, 0);
+        ui.add(button, 0, 2);
 
+        ui.add(new Label(" "),0,2);
+        ui.add(new Label(" "),0,3);
+
+        ui.add(new Label("Health: "), 0, 4);
+        ui.add(healthLabel, 1, 4);
+
+
+        ui.add(new Label("Damage: "), 0, 5);
+        ui.add(damageLabel, 1,5);
+
+        ui.add(new Label(" "),0,6);
+
+        ui.add(new Label("Inventory: "),0, 7);
+        ui.add(firstItem, 1,7);
+
+        ui.add(inventory, 1, 8);
 
         BorderPane borderPane = new BorderPane();
         borderPane.setCenter(canvas);
@@ -123,21 +137,38 @@ public class Main extends Application {
                     actors.add(map.getCell(i, j).getActor());
         for (Actor a : actors)
             a.onRefresh();
-        for (int x = 0; x < map.getWidth(); x++) {
-            for (int y = 0; y < map.getHeight(); y++) {
+
+        int minX = Math.max(map.getPlayer().getX() - viewDeltaH, 0);
+        int minY = Math.max(map.getPlayer().getY() - viewDeltaV, 0);
+        int maxX = Math.min(map.getWidth(), map.getPlayer().getX() + viewDeltaH);
+        int maxY = Math.min(map.getHeight(), map.getPlayer().getY() + viewDeltaV);
+
+        if (minX == 0) maxX = Math.min(2 * viewDeltaH + 1, map.getWidth() - 1);
+        if (minY == 0) maxY = Math.min(2 * viewDeltaV + 1, map.getHeight() - 1);
+        if (maxX == map.getWidth() - 1) minX = Math.max(map.getWidth() - 2 - viewDeltaH  * 2, 0);
+        if (maxY == map.getHeight() - 1) minY = Math.max(map.getHeight() - 2 - viewDeltaV * 2, 0);
+
+        for (int x = minX; x < maxX; x++) {
+            for (int y = minY; y < maxY; y++) {
                 Cell cell = map.getCell(x, y);
                 if (cell.getActor() != null) {
-                    Tiles.drawTile(context, cell.getActor(), x, y);
+                    Tiles.drawTile(context, cell.getActor(), x - minX, y -minY);
                 } else if (cell.getItem() != null) {
-                    Tiles.drawTile(context, cell.getItem(), x, y);
+                    Tiles.drawTile(context, cell.getItem(),x - minX, y -minY);
                 } else {
-                    Tiles.drawTile(context, cell, x, y);
+                    Tiles.drawTile(context, cell,x - minX, y -minY);
                 }
             }
         }
-        healthLabel.setText("" + map.getPlayer().getHealth());
+        healthLabel.setText("" + map.getPlayer().getHealth() + "/" + map.getPlayer().getMaxHealth());
         firstItem.setText("" + map.getPlayer().getFirstItem());
         inventory.setText("" + map.getPlayer().getInventory());
         damageLabel.setText("" + map.getPlayer().getDmg());
+
+        if (map.nextLevel() || restartFlag) {
+            restartFlag = false;
+            map = MapLoader.loadMap();
+            refresh();
+        }
     }
 }

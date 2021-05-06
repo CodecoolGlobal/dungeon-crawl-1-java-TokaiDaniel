@@ -22,10 +22,12 @@ public class Ghost extends Actor {
         int[][] offsets = { {-1, 0}, {1, 0}, {0, 1}, {0, -1}};
         boolean attackDone = false;
         for (int[] offset : offsets) {
-            Actor target = getCell().getNeighbour(offset[0], offset[1]).getActor();
+            Cell targetCell = cell.getNeighbour(offset[0], offset[1]);
+            if (targetCell == null) break;
+            Actor target = targetCell.getActor();
             if (target != null && target.getClass() == Player.class) {
                 attackDone = true;
-                attack(offset[0], offset[1]);
+                attack(target);
                 break;
             }
         }
@@ -33,8 +35,9 @@ public class Ghost extends Actor {
             if (Math.random() < moveChance) return;
             int[] targetOffset = offsets[(int)(Math.random() * 4)];
             Cell target = getCell().getNeighbour(targetOffset[0], targetOffset[1]);
-            if (target.getActor() == null)
-                move(targetOffset[0], targetOffset[1], CellType.FLOOR, CellType.WALL);
+            if (target != null && target.getActor() == null)
+                move(targetOffset[0], targetOffset[1],
+                        CellType.EMPTY, CellType.FLOOR, CellType.WALL, CellType.DOOR, CellType.OPEN_DOOR);
         }
     }
 
