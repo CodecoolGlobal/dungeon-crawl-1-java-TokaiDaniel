@@ -25,7 +25,7 @@ public class Ghost extends Actor {
             Cell targetCell = cell.getNeighbour(offset[0], offset[1]);
             if (targetCell == null) break;
             Actor target = targetCell.getActor();
-            if (target != null && target.getClass() == Player.class) {
+            if (target instanceof Player) {
                 attackDone = true;
                 attack(target);
                 break;
